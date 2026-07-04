@@ -1,0 +1,1028 @@
+<title>LLM Building and Training Primer</title>
+<style>
+  :root{
+    --bg:#16211b;
+    --bg-panel:#1c2a22;
+    --bg-panel-2:#20302670;
+    --ink:#eef0e4;
+    --ink-dim:#a9b8ac;
+    --ink-faint:#7d8c7f;
+    --accent:#e3c468;
+    --accent-ink:#3a2f0c;
+    --accent-2:#7fd1c9;
+    --accent-2-ink:#0c2a27;
+    --accent-3:#e08a8a;
+    --accent-3-ink:#3a0f0f;
+    --rule:rgba(238,240,228,.16);
+    --rule-strong:rgba(238,240,228,.30);
+    --shadow: 0 10px 30px -12px rgba(0,0,0,.5);
+    --font-display: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Noto Serif",serif;
+    --font-body: Georgia,"Iowan Old Style","Times New Roman",serif;
+    --font-mono: ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#eef1ec; --bg-panel:#e2e7dd; --bg-panel-2:#dde3d780;
+      --ink:#1f2a22; --ink-dim:#46564a; --ink-faint:#71806f;
+      --accent:#8a6a1d; --accent-ink:#fff8e6;
+      --accent-2:#1f7a70; --accent-2-ink:#eafaf7;
+      --accent-3:#a1453d; --accent-3-ink:#fff1ef;
+      --rule:rgba(31,42,34,.14); --rule-strong:rgba(31,42,34,.30);
+      --shadow: 0 10px 24px -14px rgba(30,40,30,.35);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#16211b; --bg-panel:#1c2a22; --bg-panel-2:#20302670;
+    --ink:#eef0e4; --ink-dim:#a9b8ac; --ink-faint:#7d8c7f;
+    --accent:#e3c468; --accent-ink:#3a2f0c;
+    --accent-2:#7fd1c9; --accent-2-ink:#0c2a27;
+    --accent-3:#e08a8a; --accent-3-ink:#3a0f0f;
+    --rule:rgba(238,240,228,.16); --rule-strong:rgba(238,240,228,.30);
+    --shadow: 0 10px 30px -12px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1ec; --bg-panel:#e2e7dd; --bg-panel-2:#dde3d780;
+    --ink:#1f2a22; --ink-dim:#46564a; --ink-faint:#71806f;
+    --accent:#8a6a1d; --accent-ink:#fff8e6;
+    --accent-2:#1f7a70; --accent-2-ink:#eafaf7;
+    --accent-3:#a1453d; --accent-3-ink:#fff1ef;
+    --rule:rgba(31,42,34,.14); --rule-strong:rgba(31,42,34,.30);
+    --shadow: 0 10px 24px -14px rgba(30,40,30,.35);
+    color-scheme: light;
+  }
+
+  *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important; scroll-behavior:auto !important;} }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 8%, var(--bg-panel-2), transparent 45%),
+      radial-gradient(circle at 85% 92%, var(--bg-panel-2), transparent 40%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:var(--accent-2);}
+  a:focus-visible, button:focus-visible{
+    outline:2px solid var(--accent); outline-offset:3px; border-radius:2px;
+  }
+
+  h1,h2,h3{font-family:var(--font-display); text-wrap:balance; font-weight:700; margin:0;}
+  h2{font-size:clamp(1.5rem,1.1rem + 1.4vw,2.1rem); letter-spacing:.2px;}
+  h3{font-size:clamp(1.05rem,.95rem + .5vw,1.3rem); color:var(--accent);}
+  p{margin:0 0 1em 0; max-width:66ch;}
+
+  .eyebrow{
+    font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.14em;
+    font-size:.72rem; color:var(--ink-faint);
+  }
+
+  /* ---------- global progress bar ---------- */
+  .progress-rail{position:sticky; top:0; z-index:40; height:3px; background:var(--rule); width:100%;}
+  .progress-fill{height:100%; background:var(--accent); transition:width .35s ease;}
+
+  /* ---------- page shell ---------- */
+  .page{max-width:1220px; margin:0 auto; padding:0 1.25rem 3rem;}
+
+  header.hero{padding:2.6rem 0 1.8rem;}
+  header.hero h1{font-size:clamp(1.7rem,1.2rem + 2.2vw,2.6rem); line-height:1.1; margin:.5rem 0 .8rem;}
+  header.hero .dek{font-size:1.02rem; color:var(--ink-dim); max-width:66ch;}
+  .source-note{
+    font-family:var(--font-mono); font-size:.74rem; color:var(--ink-faint);
+    margin-top:1.2rem; padding-top:.9rem; border-top:1px dashed var(--rule-strong); max-width:70ch;
+  }
+
+  .pillars{display:flex; flex-wrap:wrap; gap:.6rem; margin:1.3rem 0 .2rem;}
+  .pillar{
+    font-family:var(--font-mono); font-size:.76rem; padding:.45em .8em;
+    border:1px solid var(--rule-strong); border-radius:3px; color:var(--ink-dim);
+    background:var(--bg-panel);
+  }
+  .pillar b{color:var(--ink); font-weight:600;}
+  .pillar.dim{border-style:dashed; opacity:.7;}
+  .pillar.hot{border-color:var(--accent); color:var(--ink);}
+
+  /* ---------- app shell: rail + stage ---------- */
+  .app{display:grid; grid-template-columns:236px minmax(0,1fr); gap:1.75rem; align-items:start; border-top:1px solid var(--rule); padding-top:1.6rem;}
+  @media (max-width:900px){ .app{grid-template-columns:1fr; gap:1rem;} }
+
+  .rail{position:sticky; top:14px; display:flex; flex-direction:column; gap:.9rem;}
+  @media (max-width:900px){ .rail{position:static;} }
+
+  .rail-progress{font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); display:flex; justify-content:space-between;}
+  .rail-list{
+    display:flex; flex-direction:column; gap:.15rem;
+    border-left:2px solid var(--rule); padding-left:0;
+  }
+  @media (max-width:900px){
+    .rail-list{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr));
+      gap:.3rem .6rem; border-left:none; border-top:1px solid var(--rule);
+      border-bottom:1px solid var(--rule); padding:.8rem .1rem;
+    }
+  }
+  .toc-btn{
+    all:unset; box-sizing:border-box; cursor:pointer; display:flex; gap:.55rem; align-items:baseline;
+    font-family:var(--font-mono); font-size:.82rem; color:var(--ink-dim);
+    padding:.42rem .8rem; border-left:2px solid transparent; margin-left:-2px;
+    transition:color .15s, border-color .15s, background .15s;
+    border-radius:0 4px 4px 0;
+  }
+  @media (max-width:900px){ .toc-btn{width:100%; border-left:2px solid var(--rule-strong); border-radius:4px; margin-left:0;} }
+  .toc-btn:hover{color:var(--ink); background:var(--bg-panel-2);}
+  .toc-btn .toc-num{color:var(--ink-faint); font-size:.76rem;}
+  .toc-btn[aria-current="true"]{color:var(--accent); border-left-color:var(--accent); background:var(--bg-panel-2); font-weight:600;}
+  .toc-btn[aria-current="true"] .toc-num{color:var(--accent);}
+
+  .rail-hint{font-family:var(--font-mono); font-size:.68rem; color:var(--ink-faint);}
+  @media (max-width:900px){ .rail-hint{display:none;} }
+
+  .stage{min-width:0; padding-bottom:5.5rem;}
+
+  .panel{display:none;}
+  .panel.active{display:block; animation:fadein .28s ease;}
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .panel > .eyebrow{display:block; margin-bottom:.5rem;}
+  .panel h2{margin-bottom:.9rem;}
+  .lede{color:var(--ink-dim); font-size:1.02rem;}
+
+  .panel-rule{width:120px; height:10px; margin:1rem 0 1.8rem; opacity:.6;}
+  .panel-rule path{fill:none; stroke:var(--accent); stroke-width:1.6; stroke-linecap:round;}
+
+  /* ---------- asked-in-lecture callouts ---------- */
+  .asked{
+    display:flex; gap:.75rem; align-items:flex-start;
+    background:var(--bg-panel); border:1px solid var(--rule-strong); border-radius:6px;
+    padding:.9rem 1.1rem; margin:1.4rem 0; max-width:62ch;
+  }
+  .asked .mark{ font-family:var(--font-display); font-weight:700; font-size:1.3rem; color:var(--accent); line-height:1; margin-top:.1rem; }
+  .asked p{margin:0; font-size:.95rem; color:var(--ink-dim);}
+  .asked p b{color:var(--ink); font-weight:600; font-style:normal;}
+  .asked .tag{ display:block; font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); margin-bottom:.35em; }
+
+  .panel-quiz{
+    margin-top:1.6rem; padding:1rem 1.2rem; border:1px dashed var(--rule-strong); border-radius:6px;
+    background:var(--bg-panel-2);
+  }
+  .panel-quiz .tag{ font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint); }
+  .panel-quiz p{font-size:.92rem; margin:.4rem 0 0;}
+
+  /* ---------- generic cards / panels ---------- */
+  .card{ background:var(--bg-panel); border:1px solid var(--rule); border-radius:8px; padding:1.4rem 1.6rem; box-shadow:var(--shadow); }
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:1.4rem;}
+  @media (max-width:760px){ .grid-2{grid-template-columns:1fr;} }
+
+  .fig-caption{font-family:var(--font-mono); font-size:.76rem; color:var(--ink-faint); margin-top:.7rem;}
+
+  table{border-collapse:collapse; width:100%; font-size:.92rem;}
+  .table-wrap{overflow-x:auto; margin:1.2rem 0;}
+  th,td{text-align:left; padding:.55em .9em; border-bottom:1px solid var(--rule);}
+  th{font-family:var(--font-mono); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); font-weight:600;}
+  td.num, th.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums; text-align:right;}
+
+  code, .mono{font-family:var(--font-mono);}
+  .eq{ font-family:var(--font-mono); background:var(--bg-panel); border:1px solid var(--rule); border-radius:6px; padding:.9rem 1.1rem; overflow-x:auto; font-size:.92rem; color:var(--accent-2); }
+
+  blockquote.bitter{
+    margin:1.6rem 0; padding:1.1rem 1.4rem; border-left:3px solid var(--accent);
+    background:var(--bg-panel); font-family:var(--font-display); font-size:1.15rem; font-style:italic; color:var(--ink);
+  }
+  blockquote.bitter cite{display:block; margin-top:.6rem; font-family:var(--font-mono); font-style:normal; font-size:.72rem; color:var(--ink-faint);}
+
+  /* ---------- funnel ---------- */
+  .funnel{display:flex; flex-direction:column; gap:.55rem; margin:1.4rem 0;}
+  .funnel-row{display:grid; grid-template-columns:34px 1fr; gap:.9rem; align-items:center;}
+  .funnel-num{font-family:var(--font-mono); font-size:.78rem; color:var(--ink-faint); text-align:right;}
+  .funnel-bar{ border:1px solid var(--rule-strong); border-left:4px solid var(--accent-2); background:var(--bg-panel); border-radius:4px; padding:.6rem .9rem; }
+  .funnel-bar b{display:block; font-size:.94rem;}
+  .funnel-bar span{display:block; font-size:.8rem; color:var(--ink-dim); margin-top:.15rem;}
+  .funnel-size{font-family:var(--font-mono); font-size:.74rem; color:var(--accent-2); margin-top:.3rem; display:block;}
+
+  /* ---------- interactive demos ---------- */
+  .demo{ background:var(--bg-panel); border:1px solid var(--rule); border-radius:8px; padding:1.4rem 1.5rem; margin:1.4rem 0; }
+  .demo-controls{display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem;}
+  button.step-btn{
+    font-family:var(--font-mono); font-size:.8rem; letter-spacing:.02em;
+    background:transparent; color:var(--ink); border:1px solid var(--rule-strong);
+    border-radius:4px; padding:.5em 1em; cursor:pointer; transition:background .15s,border-color .15s;
+  }
+  button.step-btn:hover{border-color:var(--accent); color:var(--accent);}
+  button.step-btn:disabled{opacity:.35; cursor:not-allowed;}
+  button.step-btn.primary{border-color:var(--accent); color:var(--accent-ink); background:var(--accent);}
+  button.step-btn.primary:hover{filter:brightness(1.08);}
+
+  .context-box{ font-family:var(--font-mono); font-size:1.05rem; min-height:1.6em; padding:.5rem 0; color:var(--ink); border-bottom:1px dashed var(--rule-strong); margin-bottom:1rem; }
+  .context-box .caret{color:var(--accent);}
+
+  .bars{display:flex; flex-direction:column; gap:.4rem;}
+  .bar-row{display:grid; grid-template-columns:70px 1fr 46px; align-items:center; gap:.6rem; font-family:var(--font-mono); font-size:.82rem;}
+  .bar-track{background:var(--bg); border:1px solid var(--rule); border-radius:3px; height:14px; overflow:hidden;}
+  .bar-fill{height:100%; background:var(--accent-2); border-radius:2px 0 0 2px; transition:width .35s ease;}
+  .bar-row.chosen .bar-fill{background:var(--accent);}
+  .bar-row.chosen .bar-token{color:var(--accent); font-weight:700;}
+  .demo-note{font-size:.85rem; color:var(--ink-dim); margin-top:1rem;}
+
+  .bpe-words{display:flex; flex-direction:column; gap:.8rem; margin-bottom:1rem;}
+  .bpe-word-row{display:grid; grid-template-columns:110px 1fr; gap:.9rem; align-items:center;}
+  .bpe-label{font-family:var(--font-mono); font-size:.8rem; color:var(--ink-faint);}
+  .bpe-toks{display:flex; flex-wrap:wrap; gap:.28rem;}
+  .tok{ font-family:var(--font-mono); font-size:.85rem; padding:.28em .5em; border-radius:3px; background:var(--bg); border:1px solid var(--rule-strong); color:var(--ink-dim); }
+  .tok.merged{background:var(--accent-2); color:var(--accent-2-ink); border-color:transparent; font-weight:700;}
+  .bpe-caption{font-size:.92rem; color:var(--ink); min-height:2.6em; margin-top:.2rem;}
+
+  /* ---------- flow diagram ---------- */
+  .flow{display:flex; flex-wrap:wrap; gap:0; align-items:stretch; margin:1.4rem 0;}
+  .flow-box{ background:var(--bg-panel); border:1px solid var(--rule-strong); border-radius:6px; padding:.8rem 1rem; font-size:.86rem; max-width:190px; display:flex; flex-direction:column; justify-content:center; }
+  .flow-box b{display:block; font-size:.88rem; margin-bottom:.2rem;}
+  .flow-box span{color:var(--ink-dim); font-size:.8rem;}
+  .flow-arrow{display:flex; align-items:center; justify-content:center; padding:0 .5rem; color:var(--ink-faint); font-family:var(--font-mono);}
+  .flow-branch{ border:1px dashed var(--accent); background:transparent; border-radius:6px; padding:.8rem 1rem; max-width:230px; font-size:.86rem; color:var(--ink-dim); margin-top:.8rem; }
+  .flow-branch b{color:var(--accent);}
+
+  /* ---------- charts (inline svg) ---------- */
+  .chart-wrap{overflow-x:auto;}
+  svg.chart text{font-family:var(--font-mono); fill:var(--ink-faint); font-size:11px;}
+  svg.chart .gridline{stroke:var(--rule); stroke-width:1;}
+  svg.chart .axis{stroke:var(--rule-strong); stroke-width:1;}
+  svg.chart .line-transformer{fill:none; stroke:var(--accent-2); stroke-width:2.5;}
+  svg.chart .line-lstm{fill:none; stroke:var(--accent-3); stroke-width:2.5; stroke-dasharray:5 4;}
+  svg.chart .dot{fill:var(--accent);}
+
+  .barchart{display:flex; flex-direction:column; gap:.7rem; margin:1.2rem 0;}
+  .bc-row{display:grid; grid-template-columns:150px 1fr 60px; align-items:center; gap:.7rem;}
+  .bc-label{font-family:var(--font-mono); font-size:.8rem; color:var(--ink-dim);}
+  .bc-track{background:var(--bg); border:1px solid var(--rule); border-radius:3px; height:20px; position:relative;}
+  .bc-fill{height:100%; border-radius:2px 0 0 2px;}
+  .bc-fill.base{background:var(--ink-faint);}
+  .bc-fill.hi{background:var(--accent-3);}
+  .bc-fill.lo{background:var(--accent-2);}
+  .bc-val{font-family:var(--font-mono); font-size:.82rem; text-align:right;}
+
+  .numline{position:relative; height:70px; margin:1.4rem 0 2rem;}
+  .numline .track{position:absolute; top:34px; left:0; right:0; height:2px; background:var(--rule-strong);}
+  .numline .pt{position:absolute; top:22px; width:2px; height:24px; background:var(--ink-faint);}
+  .numline .pt.hi{background:var(--accent);}
+  .numline .pt .pt-label{ position:absolute; top:-26px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:.72rem; white-space:nowrap; color:var(--ink-dim); }
+  .numline .pt .pt-value{ position:absolute; top:30px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:.78rem; white-space:nowrap; color:var(--ink); }
+
+  .precision-flow{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:1.2rem 0;}
+  .bitbox{ font-family:var(--font-mono); font-size:.82rem; padding:.6em .9em; border-radius:5px; text-align:center; }
+  .bitbox.b32{border:1px solid var(--accent-2); color:var(--accent-2);}
+  .bitbox.b16{background:var(--accent-2); color:var(--accent-2-ink); border:1px solid transparent;}
+
+  /* ---------- sticky prev/next control bar ---------- */
+  .panel-nav{
+    position:sticky; bottom:0; margin-top:2.2rem; padding:.9rem 1.1rem;
+    background:var(--bg-panel); border:1px solid var(--rule-strong); border-radius:8px;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem; box-shadow:var(--shadow);
+  }
+  .panel-nav .nav-btn{
+    all:unset; cursor:pointer; font-family:var(--font-mono); font-size:.8rem; color:var(--ink-dim);
+    display:flex; flex-direction:column; gap:.15rem; padding:.3rem .5rem; border-radius:4px; max-width:38%;
+    transition:color .15s, background .15s;
+  }
+  .panel-nav .nav-btn:hover{color:var(--accent); background:var(--bg-panel-2);}
+  .panel-nav .nav-btn:disabled{opacity:.3; cursor:not-allowed; pointer-events:none;}
+  .panel-nav .nav-btn .nav-dir{font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-faint);}
+  .panel-nav .nav-btn .nav-title{color:inherit; font-size:.86rem; font-family:var(--font-display); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .panel-nav .nav-btn.next{text-align:right; align-items:flex-end;}
+  .panel-nav .nav-count{font-family:var(--font-mono); font-size:.72rem; color:var(--ink-faint); white-space:nowrap;}
+
+  footer.colophon{ margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--rule); font-size:.85rem; color:var(--ink-faint); }
+</style>
+
+<div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="page">
+  <header class="hero">
+    <h1>LLM Building and Training Primer</h1>
+    <p class="dek">Notes reconstructed from Yann Dubois's guest lecture in Stanford's CS229: Machine Learning
+    (Summer 2024), a concise overview of how ChatGPT‑like models are actually built, covering pretraining
+    (the language‑modeling objective, tokenization, data collection, scaling laws) and post‑training
+    (SFT, RLHF, DPO), with common practices in data, algorithms, and evaluation for each.</p>
+  </header>
+
+  <div class="app">
+    <nav class="rail" aria-label="Topics">
+      <div class="rail-progress"><span id="railProgressLabel">Topic 1 of 12</span><span>4 min avg</span></div>
+      <div class="rail-list" id="railList" role="tablist" aria-label="Lecture topics"></div>
+      <span class="rail-hint">Use ← / → to move between topics</span>
+    </nav>
+
+    <main class="stage" id="stage">
+
+      <section class="panel" id="panel-overview" data-title="Two eras">
+        <span class="eyebrow">00 — Framing</span>
+        <h2>Two eras: pretraining, then post&#8209;training</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p class="lede">If you've heard of <b>GPT&#8209;2</b> or <b>GPT&#8209;3</b>, that's <em>pretraining</em> —
+        the classical language&#8209;modeling paradigm: model all of the internet, one next token at a time. If
+        you've heard of <b>ChatGPT</b>, that's <em>post&#8209;training</em> — the much more recent shift from
+        "a model of internet text" to "an assistant that answers your question instead of continuing it." Every
+        model you interact with today is both: a pretrained base model, then aligned on top of it.</p>
+        <p>The lecture's opening claim is worth sitting with: academia has spent most of its effort on
+        <b>architecture</b> and <b>training algorithms</b> — new attention variants, new losses, new
+        optimizers — because that's the part that produces publishable, attributable novelty. In practice, the
+        three unglamorous components — <b>data</b>, <b>evaluation</b>, and <b>systems</b> — are what
+        separates a mediocre model from a frontier one. That imbalance is why the rest of this page is heavy
+        on the last three and light on the first.</p>
+        <div class="panel-quiz"><span class="tag">Orient yourself</span><p>Five components determine whether
+        an LLM works: architecture, training objective, data, evaluation, systems. This lecture skips the
+        first almost entirely — it's covered elsewhere — and spends its time on the other four, in roughly
+        the order they happen: objective → data → scale → alignment → evaluation → systems.</p></div>
+      </section>
+
+      <section class="panel" id="panel-lm" data-title="Language modeling">
+        <span class="eyebrow">01 — Training objective</span>
+        <h2>Language modeling is just the chain rule</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>A language model is a probability distribution over token sequences, <code>p(x&#8321;, …, x_L)</code>.
+        "The mouse ate the cheese" should get higher probability than "The the mouse ate cheese" (broken syntax)
+        or "The cheese ate the mouse" (broken semantics) — a good model has learned both.</p>
+        <p><b>Autoregressive</b> models factor that joint distribution with the chain rule of probability —
+        no approximation, just one particular way of decomposing it:</p>
+        <div class="eq">p(x&#8321;, …, x_L) &nbsp;=&nbsp; ∏<sub>t=1</sub><sup>L</sup> p(x_t &nbsp;|&nbsp; x&#8321;, …, x_(t&#8722;1))</div>
+        <p>Training just predicts the real next token and compares it to what actually happened
+        (<em>teacher forcing</em>); sampling is the same model run in a loop — tokenize → forward pass →
+        softmax over the vocabulary → sample a token → detokenize → feed it back in as new context. The
+        tokenize/sample/detokenize steps only exist at inference time; training only needs the probability
+        assigned to the real token.</p>
+
+        <div class="demo">
+          <h3 style="margin-bottom:.6rem;">Watch it sample, one token at a time</h3>
+          <p class="demo-note" style="margin-top:0;">Four illustrative decoding steps for the lecture's own
+          example, "She likely prefers ___". Each step shows the top‑5 candidates the model assigns
+          probability to <em>before</em> a token is drawn — press Next to sample and extend the context.</p>
+          <div class="context-box" id="lm-context">She<span class="caret">▍</span></div>
+          <div class="bars" id="lm-bars"></div>
+          <div class="demo-controls">
+            <button class="step-btn primary" id="lm-next">Sample next token →</button>
+            <button class="step-btn" id="lm-reset">Reset</button>
+          </div>
+          <p class="demo-note" id="lm-caption"></p>
+        </div>
+
+        <p>One structural cost of this design: generation is an inherently sequential for‑loop — token
+        <var>t</var> needs token <var>t&#8722;1</var> — so a longer completion simply takes longer to produce.
+        That's the whole reason inference latency is its own subfield.</p>
+      </section>
+
+      <section class="panel" id="panel-tokenization" data-title="Tokenization">
+        <span class="eyebrow">02 — Training objective</span>
+        <h2>Tokenization: the one decision you can't take back</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>Why not just use words? Because a typo produces a "word" with no token, and languages like Thai
+        don't even use spaces to mark word boundaries — tokens have to be more general than words. Why not
+        just use raw characters, then? Because attention cost grows quadratically with sequence length, and
+        character sequences are long. <b>Byte Pair Encoding (BPE)</b> is the practical compromise, landing
+        around 3–4 letters per token: start every character as its own token, then repeatedly merge whichever
+        adjacent pair is most frequent across the training corpus, until you hit a target vocabulary size.</p>
+
+        <div class="asked">
+          <span class="mark">"</span>
+          <p><span class="tag">Asked in lecture</span>Does the output layer's size have to equal the number of
+          tokens? <b>Yes</b> — the vocabulary is literally the width of the model's final softmax. That's why
+          tokenizer design is close to a permanent decision: growing the vocabulary later means resizing (and
+          retraining part of) the output layer.</p>
+        </div>
+
+        <div class="demo">
+          <h3 style="margin-bottom:.6rem;">Train a tiny BPE tokenizer, merge by merge</h3>
+          <p class="demo-note" style="margin-top:0;">A simplified corpus of three related words — the merges
+          are applied mechanically (most‑frequent adjacent pair wins), the same way a real BPE trainer works,
+          just at toy scale.</p>
+          <div class="bpe-words" id="bpe-words"></div>
+          <p class="bpe-caption" id="bpe-caption"></p>
+          <div class="demo-controls">
+            <button class="step-btn" id="bpe-prev">← Back</button>
+            <button class="step-btn primary" id="bpe-next">Next merge →</button>
+          </div>
+        </div>
+
+        <p>Applying the trained tokenizer always greedily prefers the <em>largest</em> known token — so once
+        "token" exists as a single token, the tokenizer never falls back to spelling it out letter by letter.
+        Untrained pairs are simply left as smaller pieces, which is exactly what gives the tokenizer graceful
+        degradation on typos and rare words.</p>
+        <p>Tokenization sounds like a footnote and isn't: because digits aren't tokenized digit‑by‑digit
+        (<code>327</code> is often one opaque token), models can't decompose arithmetic the way a human does
+        by working digit‑by‑digit — one reason LLM math is unreliable. And whitespace matters more than it
+        looks: GPT‑4's tokenizer changes to how it handles the leading four‑space indentation in Python code
+        were a deliberate fix, because naive tokenizers had been mangling code structure.</p>
+      </section>
+
+      <section class="panel" id="panel-eval-base" data-title="Evaluating a base model">
+        <span class="eyebrow">03 — Evaluation</span>
+        <h2>Evaluating a base model</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p><b>Perplexity</b> is validation loss made interpretable: exponentiate the average per‑token
+        negative log‑likelihood, so it lives on a scale of "how many tokens is the model hesitating between,"
+        bounded between 1 (perfect prediction) and the vocabulary size (total confusion):</p>
+        <div class="eq">perplexity &nbsp;=&nbsp; exp&#40; average per‑token loss &#41;</div>
+        <p>On standard benchmarks that number fell from roughly <b>70</b> plausible next words in 2017 to
+        under <b>10</b> by 2023 — models went from wavering between 70 tokens to wavering between fewer than
+        10. But perplexity isn't used to compare different models anymore, because it's tokenizer‑dependent: a
+        model with a 100,000‑token vocabulary has a higher theoretical worst‑case perplexity than one with a
+        10,000‑token vocabulary, so the numbers aren't apples‑to‑apples across labs.</p>
+        <p>What replaced it is aggregating many task benchmarks — <b>HELM</b> (Stanford) and the <b>Hugging
+        Face Open LLM Leaderboard</b> are the two most common. <b>MMLU</b> is the standard example: a
+        four‑choice question (say, in astronomy), scored either by asking which answer the model assigns
+        highest likelihood to, or by constraining decoding to just the tokens "A/B/C/D" and reading off the
+        most likely one.</p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:.5rem;">Same model, different harness</h3>
+            <p style="font-size:.92rem;">Llama‑2‑65B scored <b>63.7%</b> on MMLU under HELM's evaluation
+            harness and <b>48.8%</b> under a different one — same model, same benchmark name, a 15‑point gap
+            purely from scoring‑methodology choices (never mind prompt wording).</p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:.5rem;">Catching train/test contamination</h3>
+            <p style="font-size:.92rem;">One clever check: benchmark datasets online usually aren't shuffled.
+            If a model assigns higher likelihood to a benchmark's examples <em>in their published order</em>
+            than to the same examples shuffled, that's evidence the ordering was memorized during
+            pretraining — indirect proof the test set leaked into training data.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-data" data-title="Data pipeline">
+        <span class="eyebrow">04 — Data</span>
+        <h2>Turning a petabyte of internet into a corpus</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>"Train on all of internet" undersells the amount of engineering involved. <b>Common Crawl</b> — the
+        standard web crawl everyone starts from — holds around <b>250 billion pages</b>, roughly <b>1
+        petabyte</b>. A random page from it is not Wikipedia; it's often a half‑rendered HTML fragment with an
+        unfinished sentence. Getting from that to a training corpus is most of the actual work:</p>
+
+        <div class="funnel">
+          <div class="funnel-row"><span class="funnel-num">01</span>
+            <div class="funnel-bar"><b>Text extraction</b><span>Pull readable text out of raw HTML; strip
+            repeated headers/footers/menus. Extracting math well is its own hard problem.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">02</span>
+            <div class="funnel-bar"><b>Undesirable‑content filtering</b><span>Blocklisted domains, NSFW, PII —
+            every lab keeps a (long) blocklist, sometimes backed by a small trained classifier.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">03</span>
+            <div class="funnel-bar"><b>Deduplication</b><span>Mirrored URLs, boilerplate, and whole passages
+            from common books get copied across the web thousands of times — dedup at petabyte scale.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">04</span>
+            <div class="funnel-bar"><b>Heuristic quality filtering</b><span>Rule‑based outlier removal: token
+            distribution way off‑norm, word lengths way off‑norm, pages with 3 words or 10 million words.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">05</span>
+            <div class="funnel-bar"><b>Model‑based quality filtering</b><span>Train a classifier on "linked
+            from Wikipedia" vs. "random web page" as a cheap proxy for quality, then up‑weight the
+            Wikipedia‑adjacent side.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">06</span>
+            <div class="funnel-bar"><b>Domain reweighting</b><span>Classify into code / books / entertainment
+            / etc., then deliberately up‑weight code and books (both correlate with better reasoning) and
+            down‑weight entertainment.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">07</span>
+            <div class="funnel-bar"><b>High‑quality anneal</b><span>In the last stretch of pretraining, decay
+            the learning rate toward 0 while training on curated high‑quality data (Wikipedia, curated human
+            text) — deliberately near‑overfitting on the best data last.</span></div>
+          </div>
+          <div class="funnel-row"><span class="funnel-num">→</span>
+            <div class="funnel-bar" style="border-left-color:var(--accent);"><b>Final training corpus</b>
+            <span>A 100–1000× reduction from the raw crawl.</span>
+            <span class="funnel-size">~1 PB raw crawl → ~15 trillion tokens (Llama‑3‑class corpora, 2024)</span></div>
+          </div>
+        </div>
+
+        <div class="asked">
+          <span class="mark">"</span>
+          <p><span class="tag">Asked in lecture</span>Why filter out toxic content instead of training on it
+          with a supervised signal that says "don't do this"? <b>Both happen</b> — but not at this stage.
+          Pretraining is trying to model how people write generally; the "here's what not to say" signal comes
+          later, in post‑training.</p>
+        </div>
+
+        <p>Two numbers worth keeping: this pipeline is genuinely secretive — competitively (nobody wants to
+        hand competitors their recipe) and legally (nobody wants to publicly confirm they trained on
+        copyrighted books). And it's a bigger team than you'd guess: on a ~70‑person model team, something
+        like <b>15 people work on data alone</b> — plus a large, separate CPU compute budget just for
+        filtering at this scale.</p>
+      </section>
+
+      <section class="panel" id="panel-scaling" data-title="Scaling laws">
+        <span class="eyebrow">05 — Training objective / systems</span>
+        <h2>Scaling laws: predicting the future from small models</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>The empirical finding (OpenAI, 2020) that reshaped the field: plot compute, data, or parameter
+        count against test loss on <em>log‑log</em> axes, and the relationship is close to a straight line.
+        That's a genuinely strange and useful fact — it means you can predict how much a model will improve
+        from 10× more compute before you've spent the 10×.</p>
+
+        <div class="card chart-wrap">
+          <svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Illustrative log-log chart of test loss decreasing roughly linearly as compute increases, for a transformer and an LSTM">
+            <line class="gridline" x1="70" y1="20" x2="70" y2="250"/>
+            <line class="gridline" x1="70" y1="250" x2="600" y2="250"/>
+            <line class="gridline" x1="200" y1="20" x2="200" y2="250"/>
+            <line class="gridline" x1="330" y1="20" x2="330" y2="250"/>
+            <line class="gridline" x1="460" y1="20" x2="460" y2="250"/>
+            <line class="gridline" x1="590" y1="20" x2="590" y2="250"/>
+            <line class="axis" x1="70" y1="250" x2="600" y2="250"/>
+            <line class="axis" x1="70" y1="20" x2="70" y2="250"/>
+            <text x="70" y="268">10²¹</text>
+            <text x="190" y="268">10²²</text>
+            <text x="320" y="268">10²³</text>
+            <text x="450" y="268">10²⁴</text>
+            <text x="565" y="268">10²⁵ flops</text>
+            <text x="18" y="30">4.5</text>
+            <text x="18" y="90">3.7</text>
+            <text x="18" y="150">3.0</text>
+            <text x="18" y="210">2.3 loss</text>
+            <polyline class="line-transformer" points="80,60 200,105 330,148 460,190 590,222"/>
+            <polyline class="line-lstm" points="80,80 200,140 330,178 460,205 590,225"/>
+            <circle class="dot" cx="500" cy="200" r="4"/>
+            <text x="470" y="188" fill="var(--accent)">Llama‑3‑405B (~3.8·10²⁵)</text>
+            <line x1="380" y1="288" x2="410" y2="288" stroke="var(--accent-2)" stroke-width="2.5"/>
+            <text x="416" y="292">Transformer</text>
+            <line x1="500" y1="288" x2="530" y2="288" stroke="var(--accent-3)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <text x="536" y="292">LSTM</text>
+          </svg>
+          <p class="fig-caption">Illustrative reconstruction of the shape described in the lecture (based on
+          Kaplan et al. 2020's compute‑scaling result) — not the original digitized curve. The point isn't the
+          exact numbers, it's that both slope <em>and</em> intercept are comparable across architectures: this
+          is literally how you'd settle a "transformer vs. LSTM" argument without training either at full
+          scale.</p>
+        </div>
+
+        <p>This flips the standard ML workflow. <b>Old pipeline:</b> hyperparameter‑search directly on the
+        model you'll ship — if you have 30 GPU‑days, that might mean 30 one‑day runs, and the model you
+        actually deploy only got one day of training. <b>New pipeline:</b> find a scaling recipe (e.g., "learning
+        rate should shrink as model size grows"), tune hyperparameters on several <em>small</em> models across
+        a range of scales, fit a scaling law to those points, extrapolate to the target size — then spend
+        nearly all the budget on one large final run.</p>
+
+        <h3>Chinchilla: how many tokens per parameter?</h3>
+        <p>If more data helps and more parameters help, and compute is the shared constraint, what's the
+        optimal split? Training‑loss‑optimal ("Chinchilla‑optimal") lands near <b>20 tokens per
+        parameter</b>. But that ignores inference cost — a smaller model trained on more tokens costs less to
+        serve for its entire deployed lifetime — so production models in practice sit closer to <b>150
+        tokens per parameter</b>.</p>
+        <div class="numline">
+          <div class="track"></div>
+          <div class="pt" style="left:8%;"><span class="pt-label">Chinchilla‑optimal</span><span class="pt-value">20:1</span></div>
+          <div class="pt hi" style="left:38%;"><span class="pt-label">Llama‑3‑405B (actual)</span><span class="pt-value">≈38:1</span></div>
+          <div class="pt" style="left:92%;"><span class="pt-label">Inference‑optimal</span><span class="pt-value">≈150:1</span></div>
+        </div>
+
+        <blockquote class="bitter">"The only thing that matters, in the long run, is the leverage on
+        computation." — paraphrasing Rich Sutton's <em>Bitter Lesson</em> (2019), the lecture's framing for why
+        clever architecture tweaks mostly nudge the <em>intercept</em>, not the <em>slope</em>, of these
+        curves — and why compute, data, and systems keep winning against hand‑engineered inductive bias.
+        <cite>Cited in lecture as the reason academia's architecture‑centric incentives point the wrong way.</cite></blockquote>
+      </section>
+
+      <section class="panel" id="panel-economics" data-title="Cost of a frontier run">
+        <span class="eyebrow">06 — Systems / scaling</span>
+        <h2>What a frontier run actually costs — Llama&nbsp;3&nbsp;405B</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>Back‑of‑envelope math the lecture walked through live, using the shorthand
+        <code>FLOPs ≈ 6 · params · tokens</code>:</p>
+        <div class="table-wrap card">
+          <table>
+            <tbody>
+              <tr><th>Parameters</th><td class="num">405 B</td></tr>
+              <tr><th>Training tokens</th><td class="num">15.6 T</td></tr>
+              <tr><th>Tokens / parameter</th><td class="num">≈ 38</td></tr>
+              <tr><th>Compute (6·P·D)</th><td class="num">≈ 3.8 × 10²⁵ flops</td></tr>
+              <tr><th>Regulatory note</th><td>Just under the 10²⁶‑flop threshold that triggers U.S. executive‑order scrutiny</td></tr>
+              <tr><th>Hardware</th><td class="num">16,000 × H100</td></tr>
+              <tr><th>Wall‑clock time</th><td class="num">≈ 70 days</td></tr>
+              <tr><th>GPU‑hours</th><td class="num">≈ 26–30 M</td></tr>
+              <tr><th>Rental cost (@ ~$2/GPU‑hr)</th><td class="num">≈ $52 M</td></tr>
+              <tr><th>Team (≈50 people, 1 yr)</th><td class="num">≈ $25 M</td></tr>
+              <tr><th><b>Total, rough order</b></th><td class="num"><b>≈ $75 M</b></td></tr>
+              <tr><th>Carbon (CO₂‑equivalent)</th><td class="num">≈ 4,000 t <span style="color:var(--ink-faint);">(~2,000 JFK↔London round trips)</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:.92rem; color:var(--ink-dim);">The 38 tokens/parameter ratio sits deliberately
+        between the Chinchilla‑optimal 20 and the inference‑optimal 150 — a middle path. And each new model
+        generation has roughly multiplied compute by <b>10×</b> over the last few — constrained only by how
+        much energy and hardware a lab can actually secure.</p>
+      </section>
+
+      <section class="panel" id="panel-sft" data-title="Supervised fine-tuning">
+        <span class="eyebrow">07 — Post‑training</span>
+        <h2>Post‑training I: supervised fine‑tuning</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>A pure pretrained model isn't an assistant — ask GPT‑3 to "explain the moon landing to a
+        six‑year‑old" and it's liable to continue with <em>another question</em>, because on the internet a
+        question is usually followed by more questions, not an answer. Post‑training's job is closing that
+        gap.</p>
+        <p><b>Supervised fine‑tuning (SFT)</b> uses the exact same next‑token cross‑entropy loss as
+        pretraining — the only thing that changes is the data (curated instruction → human‑written‑answer
+        pairs) and the hyperparameters (much higher learning rate, vastly less data). It's best understood as
+        <em>behavioral cloning</em>: the pretrained model already contains many "types of writers" — one that
+        writes bullet‑point continuations, one that writes an actual answer — and SFT just reweights toward
+        the assistant‑shaped one.</p>
+        <p>Surprisingly, SFT needs very little data: the <b>LIMA</b> paper found scaling from 2,000 to 32,000
+        curated examples barely moved performance. The intuition matches the "reweighting, not teaching"
+        framing — you're not injecting new knowledge, just telling the model which latent persona to commit
+        to, so a few thousand well‑chosen examples saturate quickly.</p>
+
+        <div class="card">
+          <h3 style="margin-bottom:.4rem;">Alpaca: bootstrapping instruction data with an LLM</h3>
+          <p style="font-size:.93rem;">Human‑written instruction data is slow and expensive to collect. Alpaca
+          started from 175 human‑written seed examples, asked a strong model
+          (<code>text‑davinci‑003</code>) to generate <b>52,000</b> more in the same style, then fine‑tuned
+          LLaMA‑7B on that synthetic set to get Alpaca‑7B — an early, low‑cost academic replication of the
+          SFT step behind ChatGPT, and one of the first widely‑used examples of "use an LLM to generate the
+          data that trains the next LLM."</p>
+        </div>
+
+        <div class="asked">
+          <span class="mark">"</span>
+          <p><span class="tag">Asked in lecture</span>Doesn't purely synthetic data eventually collapse in on
+          itself across generations? <b>Probably, after a few generations of pure self‑bootstrapping</b> — the
+          more promising direction is <em>human‑in‑the‑loop</em>: let the model draft, have a human edit rather
+          than write from scratch. Edits are far cheaper than fresh writing, and still inject genuinely new
+          information, unlike pure LLM‑to‑LLM bootstrapping.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-rlhf" data-title="RLHF & DPO">
+        <span class="eyebrow">08 — Post‑training</span>
+        <h2>Post‑training II: from preferences to RLHF and DPO</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>SFT has three concrete problems. It's <b>bounded by human generation ability</b> — a human labeler
+        can often judge that one essay is better than another without being able to write the better one
+        themselves. It plausibly <b>causes hallucination</b>: if a human‑written reference answer contains a
+        fact the pretrained model never actually saw, SFT teaches the model that the right move is to
+        confidently assert plausible‑sounding claims regardless of whether it actually knows them. And
+        full human‑written gold answers are <b>expensive</b> to collect at scale.</p>
+        <p><b>RLHF</b> sidesteps all three by asking for something much cheaper than a perfect answer: given
+        two model‑generated completions, which one is better? A raw ±1 preference signal is too sparse to
+        learn much from, so instead you train a <b>reward model</b> — a classifier fit with the
+        <b>Bradley–Terry</b> loss, where the reward assigned to each completion is literally the logit of a
+        two‑way softmax over the preferred vs. dispreferred pair. Then <b>PPO</b> optimizes the policy against
+        that learned reward, with a KL penalty back to the SFT model so the policy can't wander into blind
+        spots the reward model rewards but a human wouldn't ("reward over‑optimization").</p>
+
+        <div class="flow">
+          <div class="flow-box"><b>SFT model</b><span>generates 2 completions per prompt</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><b>Preference label</b><span>human or LLM judge picks the better one</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><b>Reward model</b><span>Bradley–Terry classifier over the pair</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><b>PPO</b><span>maximize reward, KL‑anchored to the SFT policy</span></div>
+          <div class="flow-arrow">↺</div>
+          <div class="flow-box"><b>Updated policy</b><span>generates the next round of comparisons</span></div>
+        </div>
+        <div class="flow-branch"><b>DPO shortcut:</b> skip the reward model and the RL loop entirely — fit one
+        loss directly on preference pairs that raises the log‑likelihood of the preferred completion and lowers
+        it for the dispreferred one. Same global optimum as PPO under the paper's assumptions, far less
+        machinery.</div>
+
+        <p style="margin-top:1.2rem;">Worth flagging: once a model is trained with PPO it's no longer a
+        calibrated language model — it's a policy optimized to generate <em>one</em> high‑reward answer, with
+        nothing pushing it to preserve a realistic distribution over plausible answers. That's part of why
+        perplexity stops being a meaningful number for aligned models (more in the next topic).</p>
+
+        <div class="table-wrap card" style="margin-top:1.2rem;">
+          <table>
+            <thead><tr><th>—</th><th>PPO</th><th>DPO</th></tr></thead>
+            <tbody>
+              <tr><th>Separate reward model?</th><td>Yes</td><td>No — folded into one loss</td></tr>
+              <tr><th>RL rollout loop?</th><td>Yes — sample, score, update, repeat</td><td>No — a single supervised‑style pass</td></tr>
+              <tr><th>Can exploit unlabeled data?</th><td>Yes, via the reward model labeling it</td><td>No — needs labeled pairs directly</td></tr>
+              <tr><th>Implementation complexity</th><td>High — clipping, rollouts, notoriously finicky</td><td>Low — closer to ordinary fine‑tuning</td></tr>
+              <tr><th>Empirical performance</th><td>Strong</td><td>Matches PPO in practice</td></tr>
+              <tr><th>Where it's used now</th><td>Original ChatGPT recipe</td><td>Open‑source default; used in industry too</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="asked">
+          <span class="mark">"</span>
+          <p><span class="tag">Asked in lecture</span>If DPO is simpler and performs the same, why did anyone
+          start with PPO? <b>Path dependence</b> — the team that built the first RLHF pipeline included the
+          authors of PPO itself; reinforcement learning was the tool they already trusted. RL does keep one
+          theoretical edge (a trained reward model can label <em>unlabeled</em> data for further training,
+          which DPO can't do directly) — but that edge hasn't translated into a practical advantage.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-eval-assistant" data-title="Evaluating an assistant">
+        <span class="eyebrow">09 — Evaluation</span>
+        <h2>Evaluating an assistant</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>Every base‑model evaluation trick breaks down for an aligned model. There's rarely one correct
+        answer to score against; PPO'd policies aren't calibrated distributions, so perplexity is meaningless;
+        and PPO vs. DPO checkpoints don't even share a comparable loss to begin with. The fix is the same
+        preference‑pair idea RLHF trains on, repurposed for measurement: show a labeler two models' answers to
+        the same real question, ask which is better.</p>
+        <p><b>ChatBotArena</b> does this at real scale — hundreds of thousands of blind, crowdsourced votes
+        from actual users (skewed toward technical questions, since that's who shows up to compare chatbots
+        for fun). <b>AlpacaEval</b> is the cheap proxy: have GPT‑4 itself judge which of two answers is better,
+        average into a win‑rate. It correlates <b>98%</b> with ChatBotArena's rankings, and a full run costs
+        under <b>$10</b> and takes under <b>3 minutes</b> — which is why it's become the everyday development
+        loop metric.</p>
+
+        <div class="card">
+          <h3 style="margin-bottom:.6rem;">The length‑bias trap</h3>
+          <p style="font-size:.92rem; margin-bottom:1rem;">GPT‑4's win rate against <em>itself</em>, varying
+          only a system‑prompt instruction:</p>
+          <div class="barchart">
+            <div class="bc-row"><span class="bc-label">Prompted "be concise"</span>
+              <div class="bc-track"><div class="bc-fill lo" style="width:20%;"></div></div>
+              <span class="bc-val">≈20%</span></div>
+            <div class="bc-row"><span class="bc-label">Default GPT‑4 vs. GPT‑4</span>
+              <div class="bc-track"><div class="bc-fill base" style="width:50%;"></div></div>
+              <span class="bc-val">50%</span></div>
+            <div class="bc-row"><span class="bc-label">Prompted "be verbose"</span>
+              <div class="bc-track"><div class="bc-fill hi" style="width:64.4%;"></div></div>
+              <span class="bc-val">64.4%</span></div>
+          </div>
+          <p style="font-size:.92rem;">Nothing about answer quality changed — only length. Humans have the
+          same bias but self‑correct ("five pages for a simple question? no thanks"); an LLM judge trained
+          against this bias keeps exploiting it indefinitely, which is exactly why RLHF'd models tend to get
+          <em>longer</em> the more alignment they go through. Length‑controlled variants of these benchmarks
+          use regression/causal adjustment to strip the effect back out.</p>
+        </div>
+
+        <p style="font-size:.93rem; color:var(--ink-dim);">A sobering baseline underneath all of this: on
+        binary preference judgments, humans agree with the majority vote of other humans only about
+        <b>66–68%</b> of the time — even five co‑authors calibrating for three hours before labeling only
+        reached that range. Well‑tuned LLM judges now match the human‑majority vote <em>more often</em> than
+        an individual human does, at roughly <b>1/50th</b> the cost — which is the actual argument for
+        LLM‑as‑judge, not just convenience.</p>
+      </section>
+
+      <section class="panel" id="panel-systems" data-title="Systems">
+        <span class="eyebrow">10 — Systems</span>
+        <h2>Systems: where the compute actually goes</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <p>GPUs are throughput machines, not latency machines — many simple cores running the same
+        instruction over different data, tuned hardest for matrix multiplication (routing a computation
+        through matmul is routinely ~10× faster than any alternative). The catch: raw compute has been
+        improving faster than memory bandwidth and inter‑GPU communication, so naively‑written training code
+        leaves GPUs idle waiting on data far more often than people expect. The standard metric is <b>Model
+        FLOP Utilization</b> — observed throughput over theoretical peak — and ~50% is considered a good
+        result; Meta reported Llama‑class training around <b>45%</b>.</p>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="margin-bottom:.5rem;">Mixed precision</h3>
+            <p style="font-size:.92rem;">Fewer bits per number means less data to move, and deep nets tolerate
+            the added rounding noise fine (SGD is already noisy). The standard split:</p>
+            <div class="precision-flow">
+              <span class="bitbox b32">weights stored fp32</span>
+              <span>→</span>
+              <span class="bitbox b16">cast to fp16 for matmul</span>
+              <span>→</span>
+              <span class="bitbox b16">compute</span>
+              <span>→</span>
+              <span class="bitbox b32">gradient update applied in fp32</span>
+            </div>
+            <p style="font-size:.85rem; color:var(--ink-dim);">Full fp32 stays only where it matters — the
+            master weights — so a tiny learning‑rate step doesn't get rounded away to nothing.</p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:.5rem;">Operator fusion</h3>
+            <p style="font-size:.92rem;">Naive eager execution ships each tensor from GPU memory to the
+            compute cores and back <em>per line of code</em>. A fused kernel — what <code>torch.compile</code>
+            does automatically — rewrites a whole chain of operations into one round trip instead of one per
+            op.</p>
+            <p style="font-size:.85rem; color:var(--ink-dim);"><code>x.cos().cos()</code>: naive execution is
+            memory→core→memory→core→memory (4 trips); a fused kernel does memory→core→memory (2 trips) —
+            roughly a <b>2×</b> speedup, for a one‑line change.</p>
+          </div>
+        </div>
+        <p style="font-size:.9rem; color:var(--ink-faint);">The lecture ran out of time before tiling,
+        multi‑GPU parallelism strategies, and mixture‑of‑experts routing — flagged here as open threads rather
+        than skipped silently.</p>
+      </section>
+
+      <section class="panel" id="panel-takeaways" data-title="Takeaways">
+        <span class="eyebrow">11 — Synthesis</span>
+        <h2>What actually determines whether an LLM is good</h2>
+        <svg class="panel-rule" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 5 Q 15 1, 30 5 T 60 5 T 90 5 T 120 5"/></svg>
+        <div class="pillars" style="margin-bottom:1.4rem;">
+          <span class="pillar dim"><b>Architecture</b> — mostly moves the intercept</span>
+          <span class="pillar hot"><b>Data</b> — the actual moat</span>
+          <span class="pillar hot"><b>Evaluation</b> — decides what "better" even means</span>
+          <span class="pillar hot"><b>Systems</b> — decides what you can afford to try</span>
+        </div>
+        <p>Run the whole lecture back through one lens and it's a single argument, made five different ways:
+        the next‑token objective, the tokenizer, the data pipeline, the scaling laws, and the RLHF→DPO
+        simplification are all cases of a boring, general method winning over a clever, specific one, purely
+        because it scales with compute. That's the Bitter Lesson, and it's why the lecturer — an architecture
+        researcher for a chunk of their own career — spent most of this lecture everywhere except
+        architecture.</p>
+        <p style="font-size:.93rem; color:var(--ink-dim);">Left out entirely here, by the lecture's own
+        admission: architectural detail, inference‑time optimization, multimodality, whether the internet
+        even contains enough remaining data, and the legal exposure of how it was collected. The lecturer
+        pointed toward three follow‑on courses for those: <b>CS224N</b> for grounding and history,
+        <b>CS324</b> for a deeper treatment of everything covered here, and <b>CS336</b> for building an LLM
+        from scratch.</p>
+        <footer class="colophon">
+          Interactive demos (autoregressive sampler, BPE trainer) run entirely client‑side against small,
+          hand‑built example data meant to illustrate the mechanics described in the lecture — not to
+          reproduce a specific model's real output.
+        </footer>
+      </section>
+
+      <div class="panel-nav">
+        <button class="nav-btn prev" id="navPrev"><span class="nav-dir">← Previous</span><span class="nav-title" id="navPrevTitle"></span></button>
+        <span class="nav-count" id="navCount"></span>
+        <button class="nav-btn next" id="navNext"><span class="nav-dir">Next →</span><span class="nav-title" id="navNextTitle"></span></button>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  var topics = [
+    "overview","lm","tokenization","eval-base","data","scaling",
+    "economics","sft","rlhf","eval-assistant","systems","takeaways"
+  ];
+  var panels = {};
+  var titles = {};
+  topics.forEach(function(id){
+    var el = document.getElementById('panel-' + id);
+    panels[id] = el;
+    titles[id] = el.getAttribute('data-title');
+  });
+
+  var railList = document.getElementById('railList');
+  railList.innerHTML = topics.map(function(id, i){
+    var num = (i < 10 ? '0' : '') + i;
+    return '<button class="toc-btn" data-id="'+id+'" role="tab" aria-current="false">'+
+      '<span class="toc-num">'+num+'</span><span>'+titles[id]+'</span></button>';
+  }).join('');
+  var railBtns = Array.prototype.slice.call(railList.querySelectorAll('.toc-btn'));
+
+  var progressFill = document.getElementById('progressFill');
+  var railProgressLabel = document.getElementById('railProgressLabel');
+  var navPrev = document.getElementById('navPrev');
+  var navNext = document.getElementById('navNext');
+  var navPrevTitle = document.getElementById('navPrevTitle');
+  var navNextTitle = document.getElementById('navNextTitle');
+  var navCount = document.getElementById('navCount');
+  var stage = document.getElementById('stage');
+
+  var current = 0;
+
+  function showTopic(idx, opts){
+    opts = opts || {};
+    if (idx < 0 || idx >= topics.length) return;
+    current = idx;
+    var id = topics[idx];
+
+    topics.forEach(function(t){ panels[t].classList.remove('active'); });
+    panels[id].classList.add('active');
+
+    railBtns.forEach(function(btn){
+      btn.setAttribute('aria-current', btn.getAttribute('data-id') === id ? 'true' : 'false');
+    });
+
+    progressFill.style.width = (((idx+1)/topics.length) * 100) + '%';
+    railProgressLabel.textContent = 'Topic ' + (idx+1) + ' of ' + topics.length;
+    navCount.textContent = (idx+1) + ' / ' + topics.length;
+
+    if (idx === 0){ navPrev.disabled = true; navPrevTitle.textContent = ''; }
+    else { navPrev.disabled = false; navPrevTitle.textContent = titles[topics[idx-1]]; }
+
+    if (idx === topics.length - 1){ navNext.disabled = true; navNextTitle.textContent = ''; }
+    else { navNext.disabled = false; navNextTitle.textContent = titles[topics[idx+1]]; }
+
+    if (!opts.skipHash){
+      history.replaceState(null, '', '#' + id);
+    }
+    if (!opts.skipScroll){
+      var top = stage.getBoundingClientRect().top + window.pageYOffset - 12;
+      window.scrollTo({ top: top, behavior: opts.instant ? 'auto' : 'smooth' });
+    }
+  }
+
+  railBtns.forEach(function(btn, i){
+    btn.addEventListener('click', function(){ showTopic(i); });
+  });
+  navPrev.addEventListener('click', function(){ showTopic(current - 1); });
+  navNext.addEventListener('click', function(){ showTopic(current + 1); });
+
+  document.addEventListener('keydown', function(e){
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 'ArrowRight'){ showTopic(current + 1); }
+    else if (e.key === 'ArrowLeft'){ showTopic(current - 1); }
+  });
+
+  var startIdx = 0;
+  var hash = (location.hash || '').replace('#','');
+  var hashIdx = topics.indexOf(hash);
+  if (hashIdx >= 0) startIdx = hashIdx;
+  showTopic(startIdx, {skipScroll:true, skipHash:true});
+
+  // ---------- Autoregressive sampling demo ----------
+  var lmSteps = [
+    {ctx:"She", cands:[["likely",.42],["was",.18],["had",.11],["is",.09],["loves",.07]], pick:"likely"},
+    {ctx:"She likely", cands:[["prefers",.31],["enjoys",.22],["wants",.14],["needs",.10],["has",.08]], pick:"prefers"},
+    {ctx:"She likely prefers", cands:[["dogs",.27],["cats",.19],["tea",.12],["quiet",.09],["reading",.08]], pick:"dogs"},
+    {ctx:"She likely prefers dogs", cands:[[".",.58],["to",.13],["over",.09],[",",.07],["and",.05]], pick:"."}
+  ];
+  var lmIdx = 0;
+  var lmCtxEl = document.getElementById('lm-context');
+  var lmBarsEl = document.getElementById('lm-bars');
+  var lmCapEl = document.getElementById('lm-caption');
+  var lmNextBtn = document.getElementById('lm-next');
+  var lmResetBtn = document.getElementById('lm-reset');
+
+  function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderLM(){
+    var step = lmSteps[lmIdx];
+    lmCtxEl.innerHTML = escapeHtml(step.ctx) + '<span class="caret">▍</span>';
+    var max = Math.max.apply(null, step.cands.map(function(c){return c[1];}));
+    lmBarsEl.innerHTML = step.cands.map(function(c){
+      var pct = Math.round(c[1]*100);
+      var chosen = c[0] === step.pick;
+      return '<div class="bar-row'+(chosen?' chosen':'')+'"><span class="bar-token">'+escapeHtml(c[0])+'</span>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+(c[1]/max*100)+'%"></div></div>'+
+        '<span>'+pct+'%</span></div>';
+    }).join('');
+    lmCapEl.textContent = 'Step ' + (lmIdx+1) + ' of ' + lmSteps.length + ' — context so far: "' + step.ctx + '". Sampled token: "' + step.pick + '".';
+    lmNextBtn.disabled = lmIdx >= lmSteps.length - 1;
+    lmNextBtn.textContent = lmIdx >= lmSteps.length - 1 ? 'Sequence complete' : 'Sample next token →';
+  }
+  lmNextBtn.addEventListener('click', function(){
+    if (lmIdx < lmSteps.length - 1){ lmIdx++; renderLM(); }
+  });
+  lmResetBtn.addEventListener('click', function(){ lmIdx = 0; renderLM(); });
+  renderLM();
+
+  // ---------- BPE demo ----------
+  var bpeWords = ["token","tokens","tokenizer"];
+  var bpeMergeStages = [
+    {merges:[], caption:"Stage 0 — every character starts as its own token."},
+    {merges:[["t","o"]], caption:"Stage 1 — merge the most frequent adjacent pair across the corpus: t + o → to."},
+    {merges:[["t","o"],["to","k"]], caption:"Stage 2 — next most frequent pair: to + k → tok."},
+    {merges:[["t","o"],["to","k"],["tok","e"]], caption:"Stage 3 — tok + e → toke."},
+    {merges:[["t","o"],["to","k"],["tok","e"],["toke","n"]], caption:"Stage 4 — toke + n → token. The whole word \"token\" is now a single token."},
+    {merges:[["t","o"],["to","k"],["tok","e"],["toke","n"],["e","r"]], caption:"Stage 5 — separately, e + r → er, feeding the \"‑izer\" ending. Real tokenizers stop once they hit a target vocabulary size — untrained pairs (like i+z here) are simply left as individual characters, e.g. \"tokenizer\" → [token, i, z, er]."}
+  ];
+  var bpeIdx = 0;
+  var bpeWordsEl = document.getElementById('bpe-words');
+  var bpeCapEl = document.getElementById('bpe-caption');
+  var bpePrevBtn = document.getElementById('bpe-prev');
+  var bpeNextBtn = document.getElementById('bpe-next');
+
+  function applyMerges(word, merges){
+    var toks = word.split('');
+    merges.forEach(function(pair){
+      var changed = true;
+      while(changed){
+        changed = false;
+        for (var i=0;i<toks.length-1;i++){
+          if (toks[i]===pair[0] && toks[i+1]===pair[1]){
+            toks.splice(i,2,pair[0]+pair[1]);
+            changed = true;
+            break;
+          }
+        }
+      }
+    });
+    return toks;
+  }
+
+  function renderBPE(){
+    var stage = bpeMergeStages[bpeIdx];
+    bpeWordsEl.innerHTML = bpeWords.map(function(w){
+      var toks = applyMerges(w, stage.merges);
+      var spans = toks.map(function(t){
+        var isMerged = t.length > 1;
+        return '<span class="tok'+(isMerged?' merged':'')+'">'+escapeHtml(t)+'</span>';
+      }).join('');
+      return '<div class="bpe-word-row"><span class="bpe-label">"'+w+'"</span><div class="bpe-toks">'+spans+'</div></div>';
+    }).join('');
+    bpeCapEl.textContent = stage.caption;
+    bpePrevBtn.disabled = bpeIdx === 0;
+    bpeNextBtn.disabled = bpeIdx === bpeMergeStages.length - 1;
+    bpeNextBtn.textContent = bpeIdx === bpeMergeStages.length - 1 ? 'Fully merged' : 'Next merge →';
+  }
+  bpeNextBtn.addEventListener('click', function(){ if (bpeIdx < bpeMergeStages.length-1){ bpeIdx++; renderBPE(); }});
+  bpePrevBtn.addEventListener('click', function(){ if (bpeIdx > 0){ bpeIdx--; renderBPE(); }});
+  renderBPE();
+})();
+</script>
